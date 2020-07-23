@@ -13,13 +13,16 @@
 
 ### Update Request Header
 
-Set `"x-veritone-application": "org:orgGuid"` header on all API requests.
+V3 allows application and user level tracking for API calls.
+
+Setting a header "x-veritone-application":"org:orgGuid" allows Veritone to monitor API usage and provides better tracking for debugging purposes.  
 
 **VOA orgGuid: "17353"**
 
-"x-veritone-application": "org:17353"
+Example: `"x-veritone-application": "org:17353"`
 
-V3 allows application and user level tracking for API calls.
+It isn't strictly necessary, but it does help the team diagnose future issues if they arise.
+
 
 Applications **MUST**:
 
