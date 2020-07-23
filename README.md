@@ -1,5 +1,5 @@
 
-# VOA V3 Migration Documentation
+# V3 Migration Documentation
 
 Sections:
 
@@ -29,7 +29,7 @@ V3 allows application and user level tracking for API calls.
 
 Setting a header "x-veritone-application":"org:orgGuid" allows Veritone to monitor API usage and provides better tracking for debugging purposes.  
 
-Example using VOA's orgGuid: `"x-veritone-application": "org:17353"`
+Example: `"x-veritone-application": "org:your_org_guid"`
 
 It isn't strictly necessary, but it does help the team diagnose future issues if they arise.
 
@@ -73,7 +73,7 @@ mutation createTDOWithAsset {
   createTDOWithAsset(input: {
     startDateTime: 1587159404, 
     updateStopDateTimeFromAsset: true, 
-    contentType: "video/mp4", 
+    contentType: "video/mp4", # change content type as necessary
     assetType: "media", 
     uri: "media URL"
   }) {
@@ -102,7 +102,7 @@ Once you have your template there are a few things you will need for each job.
 
 ## Transcription
 
-VOA Transcription engineId's and payload types ( Speechmatics uses different engineId's instead of payloads )
+Transcription engineId's and payload types ( Speechmatics uses different engineId's instead of payloads )
 
  Engine Name             | engineId                             | payload name
  ----------------------- | ------------------------------------ | --------------------------
