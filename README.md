@@ -1,6 +1,18 @@
 
 # VOA V3 Migration Documentation
 
+Sections:
+
+[creating a TDO](#creating-a-tdo)
+
+[creating a job](#creating-a-job)
+
+[checking job status](#checking-job-status)
+
+[retrieving job output](#retrieving-job-output)
+
+[notificationUris](#notifications)
+
 ## API Flow
 
 1. `createTDOWithAsset` - Create a TDO with an audio, video, or text asset attached.
@@ -17,9 +29,7 @@ V3 allows application and user level tracking for API calls.
 
 Setting a header "x-veritone-application":"org:orgGuid" allows Veritone to monitor API usage and provides better tracking for debugging purposes.  
 
-**VOA orgGuid: "17353"**
-
-Example: `"x-veritone-application": "org:17353"`
+Example using VOA's orgGuid: `"x-veritone-application": "org:17353"`
 
 It isn't strictly necessary, but it does help the team diagnose future issues if they arise.
 
@@ -52,6 +62,8 @@ Header                 | Set header: `x-veritone-application:` to "APP_ID"      
 
 ## Example V3 API Calls
 
+# Creating a TDO
+
 ### `createTDOWithAsset`
 
 Use the TDO ID and signedUri returned from this query in the next step.
@@ -76,7 +88,7 @@ mutation createTDOWithAsset {
 }}}}
 ```
 
-### `createJob`
+# Creating a job
 
 In V3 the createJob mutations have more definition than the previous V2 and Iron frameworks in order to make them more flexible. 
 
@@ -216,7 +228,7 @@ mutation createCognitionJob {
 
 To use a different transcription engine, change the engineId and add a payload field (if necessary).
 
-## Speaker Separation
+# Speaker Separation
 
 Speaker separation should be run against a tdo with a transcription asset.
 
@@ -317,6 +329,8 @@ mutation createCognitionJob {
 
 Section will be updated as soon as the engines are finished.
 
+# Checking job status
+
 ### `checkJobStatus` 
 
 You can poll for job status updates or use `notificationUris` detailed below.
@@ -341,6 +355,7 @@ query queryJobStatus {
   }
 }
 ```
+# Retrieving job output
 
 ### `retrieveJobOutput`
 
@@ -362,6 +377,7 @@ query getEngineOutput {
       userEdited
 }}}
 ```
+# Notifications
 
 ### `notificationUris`
 
