@@ -157,13 +157,12 @@ You can also use a DAG template to create a job, these templates are verbose but
 ```
 mutation createCognitionJob {
     createJob(input: {
-      targetId: "tdo_id"
+      targetId: tdo_id
       clusterId :"rt-1cdc1d6d-a500-467a-bc46-d3c5bf3d6901"
       tasks: [
         {
           # webstream adapter
           engineId: "9e611ad7-2d3b-48f6-a51b-0a1ba40fe255"
-          payload: { url: "media_url" } # add the sourceUrl or signedUri from previous steps
           ioFolders: [
             { referenceId: "wsaOutputFolder", mode: stream, type: output }
           ]
@@ -241,7 +240,7 @@ Speaker separation should be run against a tdo with a transcription asset.
 ```
 mutation speakerSeparation {
   launchSingleEngineJob(input: {
-    targetId: "tdo_id
+    targetId: tdo_id
     engineId: "06c3f1d7-7424-407b-a3b5-6ef61154fc0b"
     fields: [
       {fieldName: "priority", fieldValue: "-10"},
@@ -259,13 +258,12 @@ mutation speakerSeparation {
 ```
 mutation createCognitionJob {
     createJob(input: {
-      targetId: 1110708367
+      targetId: tdo_id
       clusterId :"rt-1cdc1d6d-a500-467a-bc46-d3c5bf3d6901"
       tasks: [
         {
           # webstream adapter
           engineId: "9e611ad7-2d3b-48f6-a51b-0a1ba40fe255"
-          payload: { url: "https://holdforfisher.s3.amazonaws.com/KarlMeltzer4.mp4" } # add the sourceUrl or signedUri from previous steps
           ioFolders: [
             { referenceId: "wsaOutputFolder", mode: stream, type: output }
           ]
@@ -325,9 +323,113 @@ mutation createCognitionJob {
       id
 }}
 ```
-# Translation is WIP
+# Translation
 
-Section will be updated as soon as the engines are finished.
+When you are creating a translation job, attach it to a tdo as an asset, then run a translation engine against it.
+
+```
+mutation createTDOWithTextAsset {
+  createTDOWithAsset(input: {
+    startDateTime: 1587159404, 
+    stopDateTime: 1587159405, 
+    contentType: "text/plain", 
+    assetType: "transcript", 
+    addToIndex: true, 
+    uri: "media URL"
+  }) {
+      id
+      status
+      assets {
+        records {
+        id
+        assetType
+        contentType
+        signedUri
+}}}}
+```
+
+Engine Name             | engineId                             | payload
+ ----------------------- | ------------------------------------ | --------------------------
+ Google Translate V3 | a7a16a08-a2f7-4f4f-94ea-e75e74cc8252 | target: "French:fr"
+ Microsoft Translate V3 | 477b1aba-8ac4-4526-aef3-359c14ea416a | target: "fr"
+ Amazon Translate V3 | 1fc4d3d4-54ab-42d1-882c-cfc9df42f386 | sourceLanguageCode: "", target: ""
+
+
+### `textTranslation` Template 
+
+If you want to create a job without first creating a TDO, you can uncomment the `target` and `payload` objects and include a file url directly.
+
+```
+mutation createTranslationJob{
+  createJob(input: {
+    # target: { startDateTime:1574311000, stopDateTime: 1574315000 }
+    targetId: 1121185051    # comment this line if using without a TDO
+    clusterId :"rt-1cdc1d6d-a500-467a-bc46-d3c5bf3d6901"
+    tasks: [
+       {
+        # webstream adapter 
+        engineId: "9e611ad7-2d3b-48f6-a51b-0a1ba40fe255"
+        # payload: { url: "media URL" } 
+        ioFolders: [
+          { referenceId: "wsaOutputFolder", mode: stream, type: output }
+        ],
+        executionPreferences: { priority: -20 }
+      }
+      {
+        # Chunk engine  
+        engineId: "8bdb0e3b-ff28-4f6e-a3ba-887bd06e6440"  
+        payload:{ ffmpegTemplate: "rawchunk" }
+        ioFolders: [
+          { referenceId: "chunkInputFolder", mode: stream, type: input },
+          { referenceId: "chunkOutputFolder", mode: chunk, type: output }
+        ],
+        executionPreferences: { parentCompleteBeforeStarting: true, priority: -20 }
+      }
+      {
+        # The translation engine 
+        engineId: "1fc4d3d4-54ab-42d1-882c-cfc9df42f386"
+        payload: { # uncomment the line below if using Amazon Translate V3
+          # sourceLanguageCode: "en",
+          target: "fr"
+        }
+        ioFolders: [
+          { referenceId: "engineInputFolder", mode: chunk, type: input },
+          { referenceId: "engineOutputFolder", mode: chunk, type: output }
+        ],
+        executionPreferences: {	parentCompleteBeforeStarting: true, priority: -20 }
+      }
+      {
+        # output writer
+        engineId: "8eccf9cc-6b6d-4d7d-8cb3-7ebf4950c5f3"  
+        ioFolders: [
+          { referenceId: "owInputFolder", mode: chunk, type: input }
+        ],
+        executionPreferences: {	parentCompleteBeforeStarting: true, priority: -20 }
+      }
+    ]
+    routes: [
+      {  ## WSA --> chunk
+        parentIoFolderReferenceId: "wsaOutputFolder"
+        childIoFolderReferenceId: "chunkInputFolder"
+        options: {}
+      }
+      {  ## chunk --> Engine
+        parentIoFolderReferenceId: "chunkOutputFolder"
+        childIoFolderReferenceId: "engineInputFolder"
+        options: {}
+      }
+      {  ## Engine --> output writer
+        parentIoFolderReferenceId: "engineOutputFolder"
+        childIoFolderReferenceId: "owInputFolder"
+        options: {}
+      } 
+    ]
+  }) {
+    targetId
+    id
+  }
+}
+```
 
 # Checking job status
 
@@ -427,7 +529,6 @@ mutation createCognitionJob {
         {
           # webstream adapter
           engineId: "9e611ad7-2d3b-48f6-a51b-0a1ba40fe255"
-          payload: { url: "URL" } # add the sourceUrl or signedUri from previous steps
           ioFolders: [
             { referenceId: "wsaOutputFolder", mode: stream, type: output }
           ]
