@@ -267,7 +267,7 @@ mutation createCognitionJob {
           ioFolders: [
             { referenceId: "wsaOutputFolder", mode: stream, type: output }
           ]
-          executionPreferences: { priority:-10 }
+          executionPreferences: { priority:-20 }
         }
         {
           # Ingester engine to break audio into 20 second chunks
