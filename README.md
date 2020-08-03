@@ -6,12 +6,18 @@ Sections:
 [creating a TDO](#creating-a-tdo)
 
 [creating a job](#creating-a-job)
+  
+  - [transcription job](#transcription)
+  
+  - [speaker separation job](#speaker-separation)
+  
+  - [translation job](#translation)
 
 [checking job status](#checking-job-status)
 
 [retrieving job output](#retrieving-job-output)
 
-[notificationUris](#notifications)
+[notificationUris](#job-notifications)
 
 ## API Flow
 
@@ -64,8 +70,6 @@ Header                 | Set header: `x-veritone-application:` to "APP_ID"      
 
 # Creating a TDO
 
-### `createTDOWithAsset`
-
 Use the TDO ID and signedUri returned from this query in the next step.
 
 ```
@@ -100,7 +104,9 @@ Once you have your template there are a few things you will need for each job.
 
 - `engineId` Provide the id of your desired cognition engine.  Example uses an English transcription engine.
 
-## Transcription
+For a more in-depth look at Job creation, visit the official [Veritone documentation](https://docs.veritone.com/#/quickstart/jobs/?id=working-with-jobs).
+
+# Transcription
 
 Transcription engineId's and payload types ( Speechmatics uses different engineId's instead of payloads )
 
@@ -123,7 +129,9 @@ Transcription engineId's and payload types ( Speechmatics uses different engineI
  }
  ```
  
- ### `launchSingleEngineJob`
+ # launchSingleEngineJob
+ 
+ Read more about single engine jobs in the official [Veritone documentation](https://docs.veritone.com/#/overview/aiWARE-in-depth/single-engine-jobs?id=single-engine-jobs).
  
  With V3 there are still simple `createJob` style mutations from V2 but they are now called `launchSingleEngineJob`
  
@@ -137,7 +145,7 @@ Transcription engineId's and payload types ( Speechmatics uses different engineI
     targetId: "tdo_id"
     engineId: "1fe73773-edcb-4610-9c6e-cbe39eecec30"
     fields: [
-      {fieldName: "priority", fieldValue: "-10"},
+      {fieldName: "priority", fieldValue: "-20"},
       {fieldName: "language", fieldValue: "en-US"},
       {fieldName: "clusterId", fieldValue: "rt-1cdc1d6d-a500-467a-bc46-d3c5bf3d6901"}
     ]
@@ -152,7 +160,7 @@ To run this engine against a media url, provide an `uploadUrl` field instead of 
 
 You can also use a DAG template to create a job, these templates are verbose but give you more control.
 
-### `audioCognition` template
+### audioCognition template
 
 ```
 mutation createCognitionJob {
@@ -166,7 +174,7 @@ mutation createCognitionJob {
           ioFolders: [
             { referenceId: "wsaOutputFolder", mode: stream, type: output }
           ]
-          executionPreferences: { priority:-10 }
+          executionPreferences: { priority:-20 }
         }
         {
           # Ingester engine to break audio into 20 second chunks
@@ -179,7 +187,7 @@ mutation createCognitionJob {
             { referenceId: "siInputFolder", mode: stream, type: input }
             { referenceId: "siOutputFolder", mode: chunk, type: output }
           ]
-          executionPreferences: { parentCompleteBeforeStarting: true, priority:-10 }
+          executionPreferences: { parentCompleteBeforeStarting: true, priority:-20 }
         }
         {
           # English transcription with optional payload field
@@ -189,12 +197,12 @@ mutation createCognitionJob {
             { referenceId: "engineInputFolder", mode: chunk, type: input }
             { referenceId: "engineOutputFolder", mode: chunk, type: output }
           ]
-          executionPreferences: { parentCompleteBeforeStarting: true, priority:-10 }
+          executionPreferences: { parentCompleteBeforeStarting: true, priority:-20 }
         }
         {
           # Output writer
           engineId: "8eccf9cc-6b6d-4d7d-8cb3-7ebf4950c5f3"
-          executionPreferences: { parentCompleteBeforeStarting: true, priority:-10 }
+          executionPreferences: { parentCompleteBeforeStarting: true, priority:-20 }
           ioFolders: [
             { referenceId: "owInputFolder", mode: chunk, type: input }
           ]
@@ -243,7 +251,7 @@ mutation speakerSeparation {
     targetId: tdo_id
     engineId: "06c3f1d7-7424-407b-a3b5-6ef61154fc0b"
     fields: [
-      {fieldName: "priority", fieldValue: "-10"},
+      {fieldName: "priority", fieldValue: "-20"},
       {fieldName: "clusterId", fieldValue: "rt-1cdc1d6d-a500-467a-bc46-d3c5bf3d6901"},
     ]
   }) {
@@ -253,7 +261,7 @@ mutation speakerSeparation {
 }
 ```
 
-### `speakerSeparation` template
+### speakerSeparation template
 
 ```
 mutation createCognitionJob {
@@ -355,7 +363,7 @@ Engine Name             | engineId                             | payload
  Amazon Translate V3 | 1fc4d3d4-54ab-42d1-882c-cfc9df42f386 | sourceLanguageCode: "", target: ""
 
 
-### `textTranslation` Template 
+### textTranslation Template 
 
 If you want to create a job without first creating a TDO, you can uncomment the `target` and `payload` objects and include a file url directly.
 
@@ -433,8 +441,6 @@ mutation createTranslationJob{
 
 # Checking job status
 
-### `checkJobStatus` 
-
 You can poll for job status updates or use `notificationUris` detailed below.
 
 ```
@@ -459,8 +465,6 @@ query queryJobStatus {
 ```
 # Retrieving job output
 
-### `retrieveJobOutput`
-
 Include the TDO ID and Engine ID to retrieve transcription output in JSON format.
 
 The example uses english transcription, change engine id for other use cases.
@@ -479,9 +483,7 @@ query getEngineOutput {
       userEdited
 }}}
 ```
-# Notifications
-
-### `notificationUris`
+# Job Notifications
 
 `notificationUris` allow you to link to a custom endpoint(s).  This removes the need to poll for job completion, you will instead be notified when the job completes at the endpoint provided.
 
@@ -509,7 +511,7 @@ This example notifies you when the output is completed:
 {
   # Output writer
   engineId: "8eccf9cc-6b6d-4d7d-8cb3-7ebf4950c5f3"
-  executionPreferences: { parentCompleteBeforeStarting: true, priority:-10 }
+  executionPreferences: { parentCompleteBeforeStarting: true, priority:-20 }
   ioFolders: [
     { referenceId: "owInputFolder", mode: chunk, type: input }
   ]
@@ -532,7 +534,7 @@ mutation createCognitionJob {
           ioFolders: [
             { referenceId: "wsaOutputFolder", mode: stream, type: output }
           ]
-          executionPreferences: { priority:-10 }
+          executionPreferences: { priority:-20 }
         }
         {
           # Ingester engine to break audio into 20 second chunks
@@ -545,7 +547,7 @@ mutation createCognitionJob {
             { referenceId: "siInputFolder", mode: stream, type: input }
             { referenceId: "siOutputFolder", mode: chunk, type: output }
           ]
-          executionPreferences: { parentCompleteBeforeStarting: true, priority:-10 }
+          executionPreferences: { parentCompleteBeforeStarting: true, priority:-20 }
         }
         {
           # English transcription with optional payload field
@@ -555,12 +557,12 @@ mutation createCognitionJob {
             { referenceId: "engineInputFolder", mode: chunk, type: input }
             { referenceId: "engineOutputFolder", mode: chunk, type: output }
           ]
-          executionPreferences: { parentCompleteBeforeStarting: true, priority:-10 }
+          executionPreferences: { parentCompleteBeforeStarting: true, priority:-20 }
         }
         {
           # Output writer
           engineId: "8eccf9cc-6b6d-4d7d-8cb3-7ebf4950c5f3"
-          executionPreferences: { parentCompleteBeforeStarting: true, priority:-10 }
+          executionPreferences: { parentCompleteBeforeStarting: true, priority:-20 }
           ioFolders: [
             { referenceId: "owInputFolder", mode: chunk, type: input }
           ]
