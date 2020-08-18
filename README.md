@@ -113,7 +113,7 @@ Transcription engineId's and payload types ( Speechmatics uses different engineI
  Engine Name             | engineId                             | payload name
  ----------------------- | ------------------------------------ | --------------------------
  Microsoft Transcription | 1fe73773-edcb-4610-9c6e-cbe39eecec30 | "language"
- Google Transcription    | f99d363b-d20a-4498-b3cc-840b79ee7255 | "languageCode"
+ Google Transcription    | d12e8f6d-9285-4f7d-aa2e-9e6151206277 | "language"
  Speechmatics English    | c0e55cde-340b-44d7-bb42-2e0d65e98255 | n/a
  Speechmatics French     | ac20a648-5ed4-486c-a31d-d553f4209e32 | n/a
  Speechmatics Russian    | e02e7daa-5920-4119-bcc4-e0470ae12680 | n/a
@@ -177,11 +177,11 @@ mutation createCognitionJob {
           executionPreferences: { priority:-20 }
         }
         {
-          # Ingester engine to break audio into 20 second chunks
+          # Ingester engine to break audio into chunks
           engineId: "8bdb0e3b-ff28-4f6e-a3ba-887bd06e6440"
           payload:{
             ffmpegTemplate: "audio"
-            customFFMPEGProperties: { chunkSizeInSeconds: "20" }
+            customFFMPEGProperties: { chunkSizeInSeconds: "45" }
           }
           ioFolders: [
             { referenceId: "siInputFolder", mode: stream, type: input }
@@ -234,6 +234,79 @@ mutation createCognitionJob {
 ```
 
 To use a different transcription engine, change the engineId and add a payload field (if necessary).
+
+Example below is for Google Transcription:
+
+```
+mutation createGoogleCognitionJob {
+    createJob(input: {
+      targetId: tdo_id
+      clusterId :"rt-1cdc1d6d-a500-467a-bc46-d3c5bf3d6901"
+      tasks: [
+        {
+          # webstream adapter
+          engineId: "9e611ad7-2d3b-48f6-a51b-0a1ba40fe255"
+          ioFolders: [
+            { referenceId: "wsaOutputFolder", mode: stream, type: output }
+          ]
+          executionPreferences: { priority:-20 }
+        }
+        {
+          # Ingester engine to break audio into chunks
+          engineId: "8bdb0e3b-ff28-4f6e-a3ba-887bd06e6440"
+          payload:{
+            ffmpegTemplate: "audio"
+            customFFMPEGProperties: { chunkSizeInSeconds: "45" }
+          }
+          ioFolders: [
+            { referenceId: "siInputFolder", mode: stream, type: input }
+            { referenceId: "siOutputFolder", mode: chunk, type: output }
+          ]
+          executionPreferences: { parentCompleteBeforeStarting: true, priority:-20 }
+        }
+        {
+          # Google Transcription
+          engineId: "d12e8f6d-9285-4f7d-aa2e-9e6151206277"
+          payload: { language: "en-US" }
+          ioFolders: [
+            { referenceId: "engineInputFolder", mode: chunk, type: input }
+            { referenceId: "engineOutputFolder", mode: chunk, type: output }
+          ]
+          executionPreferences: { parentCompleteBeforeStarting: true, priority:-20 }
+        }
+        {
+          # Output writer
+          engineId: "8eccf9cc-6b6d-4d7d-8cb3-7ebf4950c5f3"
+          executionPreferences: { parentCompleteBeforeStarting: true, priority:-20 }
+          ioFolders: [
+            { referenceId: "owInputFolder", mode: chunk, type: input }
+          ]
+        }
+      ]
+      routes: [
+      { 
+          # adapter --> chunker
+          parentIoFolderReferenceId: "wsaOutputFolder"
+          childIoFolderReferenceId: "siInputFolder"
+          options: {}
+        }
+        { 
+          # chunker --> engine
+          parentIoFolderReferenceId: "siOutputFolder"
+          childIoFolderReferenceId: "engineInputFolder"
+          options: {}
+        }
+        { 
+          # engine --> output writer
+          parentIoFolderReferenceId: "engineOutputFolder"
+          childIoFolderReferenceId: "owInputFolder"
+          options: {}
+        }
+      ]
+    }){
+      id
+}}
+```
 
 # Speaker Separation
 
