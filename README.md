@@ -262,24 +262,6 @@ Speaker separation should be run against a tdo with a transcription asset.
  ----------------------- | ------------------------------------ | --------------------------
  Speechmatics Speaker Separation | 06c3f1d7-7424-407b-a3b5-6ef61154fc0b | n/a
  
-### `speakerSeparation` using `launchSingleEngineJob`
-
-```
-mutation speakerSeparation {
-  launchSingleEngineJob(input: {
-    targetId: tdo_id
-    engineId: "06c3f1d7-7424-407b-a3b5-6ef61154fc0b"
-    fields: [
-      {fieldName: "priority", fieldValue: "-20"},
-      {fieldName: "clusterId", fieldValue: "rt-1cdc1d6d-a500-467a-bc46-d3c5bf3d6901"},
-    ]
-  }) {
-    id
-    targetId
-  }
-}
-```
-
 ### speakerSeparation template
 
 ```
