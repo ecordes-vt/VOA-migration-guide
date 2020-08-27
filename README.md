@@ -3,8 +3,6 @@
 
 Sections:
 
-[creating a TDO](#creating-a-tdo)
-
 [creating a job](#creating-a-job)
   
   - [transcription job](#transcription)
@@ -21,10 +19,9 @@ Sections:
 
 ## API Flow
 
-1. `createTDOWithAsset` - Create a TDO with an audio, video, or text asset attached.
-2. `createJob` - Create a cognition job.
-3. `checkJobStatus` - Check the status of a job. (optional)
-4. `retrieveEngineOutput` - Retrieve the output of a completed job.
+1. `createJob` - Create a cognition job.
+2. `checkJobStatus` - Check the status of a job. (optional)
+3. `retrieveEngineOutput` - Retrieve the output of a completed job.
 
 
 ## Migrating to V3
@@ -37,60 +34,9 @@ Setting a header "x-veritone-application":"org:orgGuid" allows Veritone to monit
 
 Example: `"x-veritone-application": "org:your_org_guid"`
 
-It isn't strictly necessary, but it does help the team diagnose future issues if they arise.
-
-
-Applications **MUST**:
-
-Set `x-veritone-application` header on all API requests. This can be retrieved from the initial url from switch-app.  See below for more information
-
-All SSO Tokens in use must have a valid user_id and application_id.
-
-## User Tracking
-
-To enable user tracking, please set the following:
-
-Token                  | To Enable                                                                                     | Comments 
----------------------- | --------------------------------------------------------------------------------------------- | -------- 
-Session                | This is tracked by default                                                                    | N/A
-JWT Tokens             |                                                                                               | This is typically used by engines
-SSO Token              | Set JSON field `user_id` inside the JSONB<br/> column `json` on public.sso.sso_token          | This is typically for ingestion
-Header                 | Set header: `x-veritone-user: UserID`                                                         | API will be tracked as the user
-
-## Application Tracking
-
-Token                  | To Enable                                                                                     | Comments 
----------------------- | --------------------------------------------------------------------------------------------- | -------- 
-Session                | Set header: `x-veritone-application:` to "APP_ID"                                             | N/A
-JWT Tokens             | Set header: `x-veritone-application:` to "APP_ID"                                             | This is typically used by engines
-SSO Token              | Please set the `application_id` column on `sso_token` or set the header.                      | This is typically for ingestion
-Header                 | Set header: `x-veritone-application:` to "APP_ID"                                             | 
+Please set `x-veritone-application` header on all API requests. 
 
 ## Example V3 API Calls
-
-# Creating a TDO
-
-Use the TDO ID and signedUri returned from this query in the next step.
-
-```
-mutation createTDOWithAsset {
-  createTDOWithAsset(input: {
-    startDateTime: 1587159404, 
-    updateStopDateTimeFromAsset: true, 
-    contentType: "video/mp4", # change content type as necessary
-    assetType: "media", 
-    uri: "media URL"
-  }) {
-      id
-      status
-      assets {
-        records {
-        id
-        assetType
-        contentType
-        signedUri
-}}}}
-```
 
 # Creating a job
 
@@ -98,9 +44,9 @@ In V3 the createJob mutations have more definition than the previous V2 and Iron
 
 Once you have your template there are a few things you will need for each job.
 
-- `tdoId` Use the id provided in the response of createTDOWithAsset .
+- `tdoId` Use when reprocessing a file that is already in the Veritone system.
 
-- `sourceUrl` Use the signedUri provided in the response of createTDOWithAsset or a custom url.
+- `sourceUrl` Use a signedUrl to your file when creating a new job.
 
 - `engineId` Provide the id of your desired cognition engine.  Example uses an English transcription engine.
 
@@ -142,7 +88,7 @@ Transcription engineId's and payload types ( Speechmatics uses different engineI
  ```
  mutation microsoftTranscription{
   launchSingleEngineJob(input: {
-    targetId: "tdo_id"
+    uploadUrl: "media_url"
     engineId: "1fe73773-edcb-4610-9c6e-cbe39eecec30"
     fields: [
       {fieldName: "priority", fieldValue: "-20"},
@@ -165,12 +111,13 @@ You can also use a DAG template to create a job, these templates are verbose but
 ```
 mutation createCognitionJob {
     createJob(input: {
-      targetId: tdo_id
+      target: { status: "downloaded" } # no longer need to provide start/end time
       clusterId :"rt-1cdc1d6d-a500-467a-bc46-d3c5bf3d6901"
       tasks: [
         {
           # webstream adapter
           engineId: "9e611ad7-2d3b-48f6-a51b-0a1ba40fe255"
+          payload: { url: "link to your media file"}
           ioFolders: [
             { referenceId: "wsaOutputFolder", mode: stream, type: output }
           ]
@@ -240,12 +187,13 @@ Example below is for Google Transcription:
 ```
 mutation createGoogleCognitionJob {
     createJob(input: {
-      targetId: tdo_id
+      target: { status: "downloaded" } # no longer need to provide start/end time
       clusterId :"rt-1cdc1d6d-a500-467a-bc46-d3c5bf3d6901"
       tasks: [
         {
           # webstream adapter
           engineId: "9e611ad7-2d3b-48f6-a51b-0a1ba40fe255"
+          payload: { url: "link to your media file"}
           ioFolders: [
             { referenceId: "wsaOutputFolder", mode: stream, type: output }
           ]
@@ -443,18 +391,17 @@ If you want to create a job without first creating a TDO, you can uncomment the 
 ```
 mutation createTranslationJob{
   createJob(input: {
-    # target: { startDateTime:1574311000, stopDateTime: 1574315000 }
-    targetId: 1121185051    # comment this line if using without a TDO
+    target: { status: "downloaded" } # no longer need to provide start/end time
     clusterId :"rt-1cdc1d6d-a500-467a-bc46-d3c5bf3d6901"
     tasks: [
-       {
-        # webstream adapter 
+      {
+        # webstream adapter
         engineId: "9e611ad7-2d3b-48f6-a51b-0a1ba40fe255"
-        # payload: { url: "media URL" } 
+        payload: { url: "link to your media file"}
         ioFolders: [
           { referenceId: "wsaOutputFolder", mode: stream, type: output }
-        ],
-        executionPreferences: { priority: -20 }
+        ]
+        executionPreferences: { priority:-20 }
       }
       {
         # Chunk engine  
@@ -566,9 +513,9 @@ You can use the `notificationUri` field in `launchSingleEngineJob` to be notifie
 mutation singleEngineJob{
   launchSingleEngineJob(input: {
     engineId:"c0e55cde-340b-44d7-bb42-2e0d65e98255", # English transcription engine
-    targetId: "TDO_ID
+    uploadUrl: "link to your media"
     fields: [
-      { fieldName:"priority", fieldValue:"-10" },
+      { fieldName:"priority", fieldValue:"-20" },
       { fieldName: "notificationUri", fieldValue: "https://example.net/dump"}
     ]
   }) {
@@ -597,7 +544,7 @@ This example notifies you as each task is completed:
 ```
 mutation createCognitionJob {
     createJob(input: {
-      targetId: "TDO ID"
+      target: { status: "downloaded" } # no longer need to provide start/end time
       notificationUris: [ "https://example.net/dump" ] # This endpoint will be set for each task
       clusterId :"rt-1cdc1d6d-a500-467a-bc46-d3c5bf3d6901"
       tasks: [
