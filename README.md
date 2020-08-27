@@ -102,8 +102,6 @@ Transcription engineId's and payload types ( Speechmatics uses different engineI
 }
 ```
 
-To run this engine against a media url, provide an `uploadUrl` field instead of a `targetId`
-
 You can also use a DAG template to create a job, these templates are verbose but give you more control.
 
 ### audioCognition template
@@ -354,29 +352,6 @@ mutation createCognitionJob {
 ```
 # Translation
 
-When you are creating a translation job, attach it to a tdo as an asset, then run a translation engine against it.
-
-```
-mutation createTDOWithTextAsset {
-  createTDOWithAsset(input: {
-    startDateTime: 1587159404, 
-    stopDateTime: 1587159405, 
-    contentType: "text/plain", 
-    assetType: "transcript", 
-    addToIndex: true, 
-    uri: "media URL"
-  }) {
-      id
-      status
-      assets {
-        records {
-        id
-        assetType
-        contentType
-        signedUri
-}}}}
-```
-
 Engine Name             | engineId                             | payload
  ----------------------- | ------------------------------------ | --------------------------
  Google Translate V3 | a7a16a08-a2f7-4f4f-94ea-e75e74cc8252 | target: "French:fr"
@@ -385,8 +360,6 @@ Engine Name             | engineId                             | payload
 
 
 ### textTranslation Template 
-
-If you want to create a job without first creating a TDO, you can uncomment the `target` and `payload` objects and include a file url directly.
 
 ```
 mutation createTranslationJob{
