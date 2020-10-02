@@ -67,6 +67,8 @@ Transcription engineId's and payload types ( Speechmatics uses different engineI
  Speechmatics Arabic     | 52bb5731-7365-4179-b520-1bd9fdd37f62 | n/a
  Speechmatics Korean     | 718bce7f-cddb-44f1-b838-dfb9b25b8485 | n/a
  
+ To use a different transcription engine, change the engineId and add a payload field (if necessary).
+ 
  #### Example engine payload
  
  ```
@@ -75,36 +77,7 @@ Transcription engineId's and payload types ( Speechmatics uses different engineI
  }
  ```
  
- # launchSingleEngineJob
- 
- Read more about single engine jobs in the official [Veritone documentation](https://docs.veritone.com/#/overview/aiWARE-in-depth/single-engine-jobs?id=single-engine-jobs).
- 
- With V3 there are still simple `createJob` style mutations from V2 but they are now called `launchSingleEngineJob`
- 
- Use `launchSingleEngineJob` where supported, or use one of the template DAGs provided.
- 
- Here is an example single engine job using microsoft transcription that creates a tdo for you:
- 
- ```
- mutation microsoftTranscription{
-  launchSingleEngineJob(input: {
-    uploadUrl: "media_url"
-    engineId: "1fe73773-edcb-4610-9c6e-cbe39eecec30"
-    fields: [
-      {fieldName: "priority", fieldValue: "-20"},
-      {fieldName: "language", fieldValue: "en-US"},
-      {fieldName: "clusterId", fieldValue: "rt-1cdc1d6d-a500-467a-bc46-d3c5bf3d6901"}
-    ]
-  }) {
-    id
-    targetId
-  }
-}
-```
-
-You can also use a DAG template to create a job, these templates are verbose but give you more control.
-
-### audioCognition template
+### transcription template
 
 ```
 mutation createCognitionJob {
@@ -113,20 +86,11 @@ mutation createCognitionJob {
       clusterId :"rt-1cdc1d6d-a500-467a-bc46-d3c5bf3d6901"
       tasks: [
         {
-          # webstream adapter
-          engineId: "9e611ad7-2d3b-48f6-a51b-0a1ba40fe255"
-          payload: { url: "link to your media file"}
-          ioFolders: [
-            { referenceId: "wsaOutputFolder", mode: stream, type: output }
-          ]
-          executionPreferences: { priority:-20 }
-        }
-        {
-          # Ingester engine to break audio into chunks
           engineId: "8bdb0e3b-ff28-4f6e-a3ba-887bd06e6440"
           payload:{
-            ffmpegTemplate: "audio"
-            customFFMPEGProperties: { chunkSizeInSeconds: "45" }
+            ffmpegTemplate: "audio",
+            url: "link to your media file"
+            customFFMPEGProperties: { chunkSizeInSeconds: "300" } # change this value to < 60 if using google engine
           }
           ioFolders: [
             { referenceId: "siInputFolder", mode: stream, type: input }
@@ -135,8 +99,7 @@ mutation createCognitionJob {
           executionPreferences: { parentCompleteBeforeStarting: true, priority:-20 }
         }
         {
-          # English transcription with optional payload field
-          engineId: "c0e55cde-340b-44d7-bb42-2e0d65e98255"
+          engineId: "ENGINE_ID"
           payload: {}
           ioFolders: [
             { referenceId: "engineInputFolder", mode: chunk, type: input }
@@ -145,7 +108,6 @@ mutation createCognitionJob {
           executionPreferences: { parentCompleteBeforeStarting: true, priority:-20 }
         }
         {
-          # Output writer
           engineId: "8eccf9cc-6b6d-4d7d-8cb3-7ebf4950c5f3"
           executionPreferences: { parentCompleteBeforeStarting: true, priority:-20 }
           ioFolders: [
@@ -154,96 +116,12 @@ mutation createCognitionJob {
         }
       ]
       routes: [
-      { 
-          # adapter --> chunker
-          parentIoFolderReferenceId: "wsaOutputFolder"
-          childIoFolderReferenceId: "siInputFolder"
-          options: {}
-        }
         { 
-          # chunker --> engine
           parentIoFolderReferenceId: "siOutputFolder"
           childIoFolderReferenceId: "engineInputFolder"
           options: {}
         }
         { 
-          # engine --> output writer
-          parentIoFolderReferenceId: "engineOutputFolder"
-          childIoFolderReferenceId: "owInputFolder"
-          options: {}
-        }
-      ]
-    }){
-      id
-}}
-```
-
-To use a different transcription engine, change the engineId and add a payload field (if necessary).
-
-Example below is for Google Transcription:
-
-```
-mutation createGoogleCognitionJob {
-    createJob(input: {
-      target: { status: "downloaded" } # no longer need to provide start/end time
-      clusterId :"rt-1cdc1d6d-a500-467a-bc46-d3c5bf3d6901"
-      tasks: [
-        {
-          # webstream adapter
-          engineId: "9e611ad7-2d3b-48f6-a51b-0a1ba40fe255"
-          payload: { url: "link to your media file"}
-          ioFolders: [
-            { referenceId: "wsaOutputFolder", mode: stream, type: output }
-          ]
-          executionPreferences: { priority:-20 }
-        }
-        {
-          # Ingester engine to break audio into chunks
-          engineId: "8bdb0e3b-ff28-4f6e-a3ba-887bd06e6440"
-          payload:{
-            ffmpegTemplate: "audio"
-            customFFMPEGProperties: { chunkSizeInSeconds: "45" }
-          }
-          ioFolders: [
-            { referenceId: "siInputFolder", mode: stream, type: input }
-            { referenceId: "siOutputFolder", mode: chunk, type: output }
-          ]
-          executionPreferences: { parentCompleteBeforeStarting: true, priority:-20 }
-        }
-        {
-          # Google Transcription
-          engineId: "d12e8f6d-9285-4f7d-aa2e-9e6151206277"
-          payload: { language: "en-US" }
-          ioFolders: [
-            { referenceId: "engineInputFolder", mode: chunk, type: input }
-            { referenceId: "engineOutputFolder", mode: chunk, type: output }
-          ]
-          executionPreferences: { parentCompleteBeforeStarting: true, priority:-20 }
-        }
-        {
-          # Output writer
-          engineId: "8eccf9cc-6b6d-4d7d-8cb3-7ebf4950c5f3"
-          executionPreferences: { parentCompleteBeforeStarting: true, priority:-20 }
-          ioFolders: [
-            { referenceId: "owInputFolder", mode: chunk, type: input }
-          ]
-        }
-      ]
-      routes: [
-      { 
-          # adapter --> chunker
-          parentIoFolderReferenceId: "wsaOutputFolder"
-          childIoFolderReferenceId: "siInputFolder"
-          options: {}
-        }
-        { 
-          # chunker --> engine
-          parentIoFolderReferenceId: "siOutputFolder"
-          childIoFolderReferenceId: "engineInputFolder"
-          options: {}
-        }
-        { 
-          # engine --> output writer
           parentIoFolderReferenceId: "engineOutputFolder"
           childIoFolderReferenceId: "owInputFolder"
           options: {}
@@ -271,19 +149,10 @@ mutation createCognitionJob {
       clusterId :"rt-1cdc1d6d-a500-467a-bc46-d3c5bf3d6901"
       tasks: [
         {
-          # webstream adapter
-          engineId: "9e611ad7-2d3b-48f6-a51b-0a1ba40fe255"
-          ioFolders: [
-            { referenceId: "wsaOutputFolder", mode: stream, type: output }
-          ]
-          executionPreferences: { priority:-20 }
-        }
-        {
-          # Ingester engine to break audio into 20 second chunks
           engineId: "8bdb0e3b-ff28-4f6e-a3ba-887bd06e6440"
           payload:{
             ffmpegTemplate: "audio"
-            customFFMPEGProperties: { chunkSizeInSeconds: "20" }
+            customFFMPEGProperties: { chunkSizeInSeconds: "300" }
           }
           ioFolders: [
             { referenceId: "siInputFolder", mode: stream, type: input }
@@ -291,7 +160,7 @@ mutation createCognitionJob {
           ]
           executionPreferences: { parentCompleteBeforeStarting: true, priority:-20 }
         }
-        { # Speaker Separation
+        {
           engineId: "06c3f1d7-7424-407b-a3b5-6ef61154fc0b"
           ioFolders: [
             { referenceId: "engineInputFolder", mode: chunk, type: input }
@@ -300,7 +169,6 @@ mutation createCognitionJob {
           executionPreferences: { parentCompleteBeforeStarting: true, priority:-20 }
         }
         {
-          # Output writer
           engineId: "8eccf9cc-6b6d-4d7d-8cb3-7ebf4950c5f3"
           executionPreferences: { parentCompleteBeforeStarting: true, priority:-20 }
           ioFolders: [
@@ -310,19 +178,11 @@ mutation createCognitionJob {
       ]
       routes: [
         { 
-          # adapter --> chunker
-          parentIoFolderReferenceId: "wsaOutputFolder"
-          childIoFolderReferenceId: "siInputFolder"
-          options: {}
-        }
-        { 
-          # chunker --> engine
           parentIoFolderReferenceId: "siOutputFolder"
           childIoFolderReferenceId: "engineInputFolder"
           options: {}
         }
         { 
-          # engine --> output writer
           parentIoFolderReferenceId: "engineOutputFolder"
           childIoFolderReferenceId: "owInputFolder"
           options: {}
@@ -350,18 +210,8 @@ mutation createTranslationJob{
     clusterId :"rt-1cdc1d6d-a500-467a-bc46-d3c5bf3d6901"
     tasks: [
       {
-        # webstream adapter
-        engineId: "9e611ad7-2d3b-48f6-a51b-0a1ba40fe255"
-        payload: { url: "link to your media file"}
-        ioFolders: [
-          { referenceId: "wsaOutputFolder", mode: stream, type: output }
-        ]
-        executionPreferences: { priority:-20 }
-      }
-      {
-        # Chunk engine  
         engineId: "8bdb0e3b-ff28-4f6e-a3ba-887bd06e6440"  
-        payload:{ ffmpegTemplate: "rawchunk" }
+        payload:{ ffmpegTemplate: "rawchunk", url: "link to your text file" }
         ioFolders: [
           { referenceId: "chunkInputFolder", mode: stream, type: input },
           { referenceId: "chunkOutputFolder", mode: chunk, type: output }
@@ -369,11 +219,9 @@ mutation createTranslationJob{
         executionPreferences: { parentCompleteBeforeStarting: true, priority: -20 }
       }
       {
-        # The translation engine 
-        engineId: "1fc4d3d4-54ab-42d1-882c-cfc9df42f386"
-        payload: { # uncomment the line below if using Amazon Translate V3
-          # sourceLanguageCode: "en",
-          target: "fr"
+        engineId: "ENGINE_ID"
+        payload: {
+          target: "LANG_CODE"
         }
         ioFolders: [
           { referenceId: "engineInputFolder", mode: chunk, type: input },
@@ -382,7 +230,6 @@ mutation createTranslationJob{
         executionPreferences: {	parentCompleteBeforeStarting: true, priority: -20 }
       }
       {
-        # output writer
         engineId: "8eccf9cc-6b6d-4d7d-8cb3-7ebf4950c5f3"  
         ioFolders: [
           { referenceId: "owInputFolder", mode: chunk, type: input }
@@ -391,17 +238,12 @@ mutation createTranslationJob{
       }
     ]
     routes: [
-      {  ## WSA --> chunk
-        parentIoFolderReferenceId: "wsaOutputFolder"
-        childIoFolderReferenceId: "chunkInputFolder"
-        options: {}
-      }
-      {  ## chunk --> Engine
+      {
         parentIoFolderReferenceId: "chunkOutputFolder"
         childIoFolderReferenceId: "engineInputFolder"
         options: {}
       }
-      {  ## Engine --> output writer
+      {
         parentIoFolderReferenceId: "engineOutputFolder"
         childIoFolderReferenceId: "owInputFolder"
         options: {}
@@ -442,12 +284,10 @@ query queryJobStatus {
 
 Include the TDO ID and Engine ID to retrieve transcription output in JSON format.
 
-The example uses english transcription, change engine id for other use cases.
-
 ```
 query getEngineOutput {
   engineResults(tdoId: "TDO_ID",
-    engineIds: ["c0e55cde-340b-44d7-bb42-2e0d65e98255"]) { # Retrieves results from english transcription engine
+    engineIds: ["ENGINE_ID"]) { 
     records {
       tdoId
       engineId
@@ -462,29 +302,10 @@ query getEngineOutput {
 
 `notificationUris` allow you to link to a custom endpoint(s).  This removes the need to poll for job completion, you will instead be notified when the job completes at the endpoint provided.
 
-You can use the `notificationUri` field in `launchSingleEngineJob` to be notified when the engine has completed.
-
-```
-mutation singleEngineJob{
-  launchSingleEngineJob(input: {
-    engineId:"c0e55cde-340b-44d7-bb42-2e0d65e98255", # English transcription engine
-    uploadUrl: "link to your media"
-    fields: [
-      { fieldName:"priority", fieldValue:"-20" },
-      { fieldName: "notificationUri", fieldValue: "https://example.net/dump"}
-    ]
-  }) {
-    id
-}}
-```
-
-You can also set notifications at the task level for more updates on job status.
-
 This example notifies you when the output is completed:
 
 ```
 {
-  # Output writer
   engineId: "8eccf9cc-6b6d-4d7d-8cb3-7ebf4950c5f3"
   executionPreferences: { parentCompleteBeforeStarting: true, priority:-20 }
   ioFolders: [
@@ -504,19 +325,10 @@ mutation createCognitionJob {
       clusterId :"rt-1cdc1d6d-a500-467a-bc46-d3c5bf3d6901"
       tasks: [
         {
-          # webstream adapter
-          engineId: "9e611ad7-2d3b-48f6-a51b-0a1ba40fe255"
-          ioFolders: [
-            { referenceId: "wsaOutputFolder", mode: stream, type: output }
-          ]
-          executionPreferences: { priority:-20 }
-        }
-        {
-          # Ingester engine to break audio into 20 second chunks
           engineId: "8bdb0e3b-ff28-4f6e-a3ba-887bd06e6440"
           payload:{
             ffmpegTemplate: "audio"
-            customFFMPEGProperties: { chunkSizeInSeconds: "20" }
+            customFFMPEGProperties: { chunkSizeInSeconds: "300" }
           }
           ioFolders: [
             { referenceId: "siInputFolder", mode: stream, type: input }
@@ -525,8 +337,7 @@ mutation createCognitionJob {
           executionPreferences: { parentCompleteBeforeStarting: true, priority:-20 }
         }
         {
-          # English transcription with optional payload field
-          engineId: "c0e55cde-340b-44d7-bb42-2e0d65e98255"
+          engineId: "ENGINE_ID"
           payload: {}
           ioFolders: [
             { referenceId: "engineInputFolder", mode: chunk, type: input }
@@ -535,7 +346,6 @@ mutation createCognitionJob {
           executionPreferences: { parentCompleteBeforeStarting: true, priority:-20 }
         }
         {
-          # Output writer
           engineId: "8eccf9cc-6b6d-4d7d-8cb3-7ebf4950c5f3"
           executionPreferences: { parentCompleteBeforeStarting: true, priority:-20 }
           ioFolders: [
@@ -544,20 +354,12 @@ mutation createCognitionJob {
         }
       ]
       routes: [
-      { 
-          # adapter --> chunker
-          parentIoFolderReferenceId: "wsaOutputFolder"
-          childIoFolderReferenceId: "siInputFolder"
-          options: {}
-        }
         { 
-          # chunker --> engine
           parentIoFolderReferenceId: "siOutputFolder"
           childIoFolderReferenceId: "engineInputFolder"
           options: {}
         }
         { 
-          # engine --> output writer
           parentIoFolderReferenceId: "engineOutputFolder"
           childIoFolderReferenceId: "owInputFolder"
           options: {}
