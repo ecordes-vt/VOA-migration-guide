@@ -59,7 +59,7 @@ Transcription engineId's and payload types ( Speechmatics uses different engineI
  Engine Name             | engineId                             | payload name
  ----------------------- | ------------------------------------ | --------------------------
  Microsoft Transcription | 1fe73773-edcb-4610-9c6e-cbe39eecec30 | "language"
- Google Transcription    | d12e8f6d-9285-4f7d-aa2e-9e6151206277 | "language"
+ Google Transcription    | d12e8f6d-9285-4f7d-aa2e-9e6151206277 | "languageCode"
  Speechmatics English    | c0e55cde-340b-44d7-bb42-2e0d65e98255 | n/a
  Speechmatics French     | ac20a648-5ed4-486c-a31d-d553f4209e32 | n/a
  Speechmatics Russian    | e02e7daa-5920-4119-bcc4-e0470ae12680 | n/a
